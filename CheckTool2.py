@@ -684,7 +684,7 @@ class CheckTool():
 
                     if len(t4)>0:    # 文字列配列が１個以上ある場合に処理
                         for t5 in t4:
-                            t6 = t5.replace("(","").replace(")","").replace(" ","").replace("C","").replace("T","").replace("組","")     # 「検定比」と数値が一緒の場合は除去
+                            t6 = t5.replace("(","").replace(")","").replace(" ","").replace("C","").replace("T","").replace("組","")      # 「検定比」と数値が一緒の場合は除去
                             nn = t3.find(t6,st)   # 数値の文字位置を検索
                             ln = len(t6)
 
@@ -852,7 +852,7 @@ class CheckTool():
                     # fword = "σc/fc"
                     fword1 = "σc/fc"
                     fword2 = "σ/fc"
-                    fword3 = "検定比"
+                    fword3 = "σ/f"
                     for line in CharLines:
                         i += 1
                         t3 = line[0]
@@ -994,7 +994,7 @@ class CheckTool():
                     kmode = False
                     fword1 = "σb/fb"
                     fword2 = "σ/fb"
-                    fword3 = "検定比"
+                    fword3 = "σ/f"
                     for line in CharLines:
                         i += 1
                         t3 = line[0]
@@ -1197,49 +1197,43 @@ class CheckTool():
                     # lines =t1.splitlines()
                     i = -1
                     kmode = False
-                    fword1 = "Nt/Nat"
-                    fword2 = "σt/ft"
-                    fword3 = "検定比"
                     for line in CharLines:
                         i += 1
                         t3 = line[0]
+                        fword = "Nt/Nat"
                         if not kmode :
-                            if fword1 in t3 or fword2 in t3 or fword3 in t3 : # 最初のfwordが現れたら「kmode」をTrue
+                            if fword in t3 : # 最初の「検定比」が現れたら「kmode」をTrue
                                 kmode = True
-                                if fword1 in t3:
-                                    fword = fword1
-                                elif fword2 in t3:
-                                    fword = fword2
-                                elif fword3 in t3:
-                                    fword = fword3
-                                #end i
-                                # fwordより右側にある数値だけを検出するためのX座標を取得
-                                n = t3.index(fword)  # + len(fword)
+                                # 「検定比」の下にある数値だけを検出するためのX座標を取得
+                                n = t3.index(fword)
                                 c1 = CharData[i][n]
                                 zx0 = c1[1]
-                            #end if
-                        if kmode :
+                                c2 = CharData[i][n+len(fword)-1]
+                                zx1 = c2[2]
+                                # print(c1[0],c2[0], zx0, zx1)
+                        else:
                             CharLine = CharData[i] # １行文のデータを読み込む
                             t4 = ""
                         
                             for char in CharLine:
-                                # kfwordより右側にある数値だけを検出する。
+                                # kmodeの時には「検定比」の下にある数値だけを検出する。
                                 if char[1]>=zx0 :
                                     t4 += char[0]
-
-                            t4 = t4.replace(fword,"") 
+                                #end if
                             #next
-                            if t4 == "": # 
+                            if t4 == "" :
                                 kmode = False
-                            else:
+                            #end if
+
+                            if isfloat(t4): # 切り取った文字が数値の場合の処理
                                 st = 0
                                 w0 = t4.split()
-                                if len(w0)>=1:
+                                if len(w0)>1:
                                     for w1 in w0:
                                         w2 = w1.replace(" ","")
                                         if isfloat(w2): # 切り取った文字が数値の場合の処理
                                             a = float(w2)
-                                            if a>=limit1 and a<1.0:
+                                            if a>=limit3 and a<1.0:
                                                 # 数値がlimit以上の場合はデータに登録
                                                 n = t3.find(w2,st)   # 数値の文字位置を検索
                                                 xxx0 = CharLine[n][1]
@@ -1257,12 +1251,16 @@ class CheckTool():
                                                 print('val={:.2f}'.format(val))
                                             #end if
                                         #end if
+                                        
                                         st = t3.find(w1,st)+ len(w1)
                                     #next
                                 #end if
                             #end if
                         #end if
-    
+                    #next
+            #end if
+        #end if
+        
         #==========================================================================
         #  検出結果を出力する
         return pageFlag, ResultData
@@ -1347,7 +1345,7 @@ class CheckTool():
                     t4 = items
                     if len(t4)>0:    # 文字列配列が１個以上ある場合に処理
                         for t5 in t4:
-                            t6 = t5.replace("(","").replace(")","").replace(" ","").replace("C","").replace("T","").replace("組","")     # 「検定比」と数値が一緒の場合は除去
+                            t6 = t5.replace("(","").replace(")","").replace(" ","").replace("C","").replace("T","")     # 「検定比」と数値が一緒の場合は除去
                             nn = t3.find(t6,st)   # 数値の文字位置を検索
                             ln = len(t6)
 
@@ -1355,7 +1353,7 @@ class CheckTool():
                             if "(" in t5:
                                 xn1 = 1
                                 xn2 = 1
-                            elif "C" in t5 or "T" in t5 or "組" in t5:
+                            elif "C" in t5 or "T" in t5:
                                 xn1 = 0
                                 xn2 = 1
                             else:
