@@ -45,6 +45,7 @@ import logging
 import glob
 import threading
 from multiprocessing import Process
+import shutil
 
 kind = ""
 version = ""
@@ -436,12 +437,15 @@ class CheckTool():
         layout = device.get_result()
 
         CharData = []
+        CharData2 = []
         for lt in layout:
             if isinstance(lt, LTChar):  # レイアウトデータうち、LTCharのみを取得
                 char1 = lt.get_text()   # レイアウトデータに含まれる全文字を取得
                 m1 = lt.matrix
                 if m1[1] == 0.0 :  # 回転していない文字のみを抽出
                     CharData.append([char1, lt.x0, lt.x1, lt.y0, lt.y1,lt.matrix])
+                else:
+                    CharData2.append([char1, lt.x0, lt.x1, lt.y0, lt.y1,lt.matrix])
                 #end if
             #end if
         #next
@@ -474,6 +478,36 @@ class CheckTool():
             tbox.append([tline])
             # text1 += tline + "\n"
         #end if
+
+        cline=[]
+        tline = ""
+        flag = False
+        for c in CharData2:
+            if flag == False:
+                if c[0] != " ":
+                    cline.append(c)
+                    tline += c[0]
+                    flag = True
+                #end if
+            else:
+                if c[0] != " ":
+                    cline.append(c)
+                    tline += c[0]
+                    flag = True
+                else:
+                    cdata.append(cline)
+                    tbox.append([tline])
+                    cline=[]
+                    tline = ""
+                    flag = False
+                #end if
+            #end if
+        #next
+        if tline != "":
+            cdata.append(cline)
+            tbox.append([tline])
+        #end if
+
         # print(text1)
         t1 = tbox
         CharData5 = cdata
@@ -650,7 +684,7 @@ class CheckTool():
 
                     if len(t4)>0:    # 文字列配列が１個以上ある場合に処理
                         for t5 in t4:
-                            t6 = t5.replace("(","").replace(")","").replace(" ","").replace("C","").replace("T","")     # 「検定比」と数値が一緒の場合は除去
+                            t6 = t5.replace("(","").replace(")","").replace(" ","").replace("C","").replace("T","").replace("組","")      # 「検定比」と数値が一緒の場合は除去
                             nn = t3.find(t6,st)   # 数値の文字位置を検索
                             ln = len(t6)
 
@@ -658,7 +692,7 @@ class CheckTool():
                             if "(" in t5:
                                 xn1 = 1
                                 xn2 = 1
-                            elif "C" in t5 or "T" in t5:
+                            elif "C" in t5 or "T" in t5 or "組" in t5:
                                 xn1 = 0
                                 xn2 = 1
                             else:
@@ -1311,7 +1345,7 @@ class CheckTool():
                     t4 = items
                     if len(t4)>0:    # 文字列配列が１個以上ある場合に処理
                         for t5 in t4:
-                            t6 = t5.replace("(","").replace(")","").replace(" ","").replace("C","").replace("T","")     # 「検定比」と数値が一緒の場合は除去
+                            t6 = t5.replace("(","").replace(")","").replace(" ","").replace("C","").replace("T","").replace("組","")     # 「検定比」と数値が一緒の場合は除去
                             nn = t3.find(t6,st)   # 数値の文字位置を検索
                             ln = len(t6)
 
@@ -1319,7 +1353,7 @@ class CheckTool():
                             if "(" in t5:
                                 xn1 = 1
                                 xn2 = 1
-                            elif "C" in t5 or "T" in t5:
+                            elif "C" in t5 or "T" in t5 or "組" in t5:
                                 xn1 = 0
                                 xn2 = 1
                             else:
@@ -1621,7 +1655,7 @@ class CheckTool():
     #  表紙のチェック（外部から読み出す関数名）
     #============================================================================
 
-    def TopPageCheckTool(self,filename, outfimename,limit=0.95 ):
+    def TopPageCheckTool(self,filename, outdir,limit=0.95 ):
         global flag1, fname, dir1, dir2, dir3, dir4, dir5, folderName, paraFileName
         global ErrorFlag, ErrorMessage
         global kind, verion
@@ -1631,7 +1665,7 @@ class CheckTool():
         #end if
 
         pdf_file = filename
-        pdf_out_file = outfimename
+        pdf_out_file = outdir + "/outfile0000.pdf"
 
         # PyPDF2のツールを使用してPDFのページ情報を読み取る。
         # PDFのページ数と各ページの用紙サイズを取得
@@ -1784,11 +1818,11 @@ class CheckTool():
 
 
 
-#============================================================================
+    #============================================================================
     #  プログラムのメインルーチン（外部から読み出す関数名）
     #============================================================================
 
-    def PageCheck(self,filename, outfilenme,limit ,kind, version):
+    def PageCheck(self,filename, outdir, stpage, edpage, psn, bunkatu,limit ,kind, version):
         global flag1, fname, dir1, dir2, dir3, dir4, dir5, folderName, paraFileName
         global ErrorFlag, ErrorMessage
         
@@ -1797,7 +1831,7 @@ class CheckTool():
         #end if
 
         pdf_file = filename
-        pdf_out_file = outfilenme
+        # pdf_out_file = outfilenme
 
         # PyPDF2のツールを使用してPDFのページ情報を読み取る。
         # PDFのページ数と各ページの用紙サイズを取得
@@ -1824,24 +1858,9 @@ class CheckTool():
         #end try
         
         #=============================================================
-        startpage = 1
-        endpage = PageMax
-        # if stpage <= 0 :      # 検索を開始する最初のページ
-        #     startpage = 2
-        # elif stpage > PageMax:
-        #     startpage = PageMax-1
-        # else:
-        #     startpage = stpage
-        # #end if
-
-        # if edpage <= 0 :  # 検索を終了する最後のページ
-        #     endpage = PageMax 
-        # elif edpage > PageMax:
-        #     endpage = PageMax
-        # else:
-        #     endpage = edpage
-        # #end if
-
+        # startpage = 1
+        # endpage = PageMax
+        
         # PDFMinerのツールの準備
         resourceManager = PDFResourceManager()
         # PDFから単語を取得するためのデバイス
@@ -1857,59 +1876,60 @@ class CheckTool():
                 interpreter = PDFPageInterpreter(resourceManager, device)
                 interpreter2 = PDFPageInterpreter(resourceManager, device2)
                 pageI = 0
-                
+                pageI2 = 0
                 for page in PDFPage.get_pages(fp):
                     pageI += 1
-
-                    ResultData = []
-                    print("page={}:".format(pageI), end="")
-                    # if pageI == 1 :
-                    #     # flag1 = True
-                    #     pageFlag = True
-                    #     kind, version = self.CoverCheck(page, interpreter2, device2)
+                    # if pageI < stpage:
                     #     print()
-                    #     print("プログラムの名称：{}".format(kind))
-                    #     print("プログラムのバーsジョン：{}".format(version))
+                    #     continue
+                    # #end if
+                    # if pageI > edpage:
+                    #     break
+                    # #end if
+                    if pageI>=stpage and pageI<=edpage:
+                        pageI2 += 1
+                        if pageI2 % bunkatu == psn:
+                            # outfile = outdir + "/" + "outfile{:0=4}.pdf".format(pageI)
+                            ResultData = []
+                            print("page={}:".format(pageI), end="")
+                            
+                            # if pageI < stpage:
+                            #     print()
+                            #     continue
+                            # #end if
+                            # if pageI > edpage:
+                            #     break
+                            # #end if
 
-                    #     with open("./kind.txt", 'w', encoding="utf-8") as fp2:
-                    #         print(kind, file=fp2)
-                    #         print(version, file=fp2)
-                    #         fp2.close()
+                            if kind == "SuperBuild/SS7":
+                                #============================================================
+                                # 構造計算書がSS7の場合の処理
+                                #============================================================
 
-                    # else:
+                                pageFlag, ResultData = self.SS7(page, limit, interpreter, device, interpreter2, device2)
 
-                    if pageI < startpage:
-                        print()
-                        continue
-                    #end if
-                    if pageI > endpage:
-                        break
-                    #end if
+                            # 他の種類の構造計算書を処理する場合はここに追加
+                            # elif kind == "****":
+                            #     pageFlag, ResultData = self.***(page, limit, interpreter, device, interpreter2, device2)
 
-                    if kind == "SuperBuild/SS7":
-                        #============================================================
-                        # 構造計算書がSS7の場合の処理
-                        #============================================================
+                            else:
+                                #============================================================
+                                # 構造計算書の種類が不明の場合はフォーマットを無視して数値のみを検出
+                                #============================================================
 
-                        pageFlag, ResultData = self.SS7(page, limit, interpreter, device, interpreter2, device2)
+                                pageFlag, ResultData = self.OtherSheet(page, limit, interpreter, device, interpreter2, device2)
 
-                    # 他の種類の構造計算書を処理する場合はここに追加
-                    # elif kind == "****":
-                    #     pageFlag, ResultData = self.***(page, limit, interpreter, device, interpreter2, device2)
+                                # return False
+                            #end if
 
-                    else:
-                        #============================================================
-                        # 構造計算書の種類が不明の場合はフォーマットを無視して数値のみを検出
-                        #============================================================
-
-                        pageFlag, ResultData = self.OtherSheet(page, limit, interpreter, device, interpreter2, device2)
-
-                        # return False
-                    #end if
-
-                    if pageFlag : 
-                        pageNo.append(pageI)
-                        pageResultData.append(ResultData)
+                            if pageFlag : 
+                                
+                                pageNo.append(pageI)
+                                pageResultData.append(ResultData)
+                            # else:
+                            #     print()
+                            #end if
+                        #end if
                     #end if
                 #next
 
@@ -1941,17 +1961,24 @@ class CheckTool():
         try:
             if len(pageNo)>0:
                 in_path = pdf_file
-                out_path = pdf_out_file
+                # out_path = pdf_out_file
 
-                # 保存先PDFデータを作成
-                cc = canvas.Canvas(out_path)
-                cc.setLineWidth(1)
+                # # 保存先PDFデータを作成
+                # cc = canvas.Canvas(out_path)
+                # cc.setLineWidth(1)
                 # PDFを読み込む
                 pdf = PdfReader(in_path, decompress=False)
 
                 i = 0
                 for pageI in range(len(pageNo)):
                     pageN = pageNo[pageI]
+
+                    out_path = outdir + "/" + "outfile{:0=4}.pdf".format(pageN)
+
+                    # 保存先PDFデータを作成
+                    cc = canvas.Canvas(out_path)
+                    cc.setLineWidth(1)
+
                     pageSizeX = float(PaperSize[pageN-1][0])
                     pageSizeY = float(PaperSize[pageN-1][1])
                     page = pdf.pages[pageN - 1]
@@ -1961,13 +1988,6 @@ class CheckTool():
                     rl_obj = makerl(cc, pp) # ReportLabオブジェクトへの変換  
                     cc.doForm(rl_obj) # 展開
 
-                    # if pageN == 1:  # 表紙に「"検定比（0.##以上）の検索結果」の文字を印字
-                    #     cc.setFillColor("red")
-                    #     font_name = "ipaexg"
-                    #     cc.setFont(font_name, 20)
-                    #     cc.drawString(20 * mm,  pageSizeY - 40 * mm, "検定比（{}以上）の検索結果".format(limit))
-
-                    # else:   # ２ページ目以降は以下の処理
                     pn = len(ResultData)
 
                     # ページの左肩に検出個数を印字
@@ -2003,14 +2023,12 @@ class CheckTool():
 
                     # ページデータの確定
                     cc.showPage()
+                    cc.save()
                 # next
 
                 # PDFの保存
-                cc.save()
+                # cc.save()
 
-                # time.sleep(1.0)
-                # # すべての処理がエラーなく終了したのでTrueを返す。
-                # return True
             #end if
 
         except OSError as e:
@@ -2029,16 +2047,28 @@ class CheckTool():
     #end def    
     #*********************************************************************************
 
-
-
+#============================================================================
+#  並列処理による数値チェックのクラス
+#============================================================================
 
 class multicheck:
+
+    #============================================================================
+    #  クラスの初期化関数
+    #       fiename     : 計算書のファウル名
+    #       limit       : 閾値
+    #       stpage      : 処理開始ページ
+    #       edpage      : 処理終了ページ
+    #       bunkatu     : 並列処理の分割数
+    #============================================================================
     def __init__(self,filename, limit=0.95 ,stpage=0, edpage=0, bunkatu=4):
         self.filename = filename
         self.limit = limit
         self.bunkatu = bunkatu
         self.kinf =""
         self.version = ""
+
+        # 検出結果のファイル名
         self.pdf_out_file = os.path.splitext(self.filename)[0] + '[検出結果(閾値={:.2f}'.format(limit)+')].pdf'
 
         # PyPDF2のツールを使用してPDFのページ情報を読み取る。
@@ -2060,7 +2090,7 @@ class multicheck:
         
         #=============================================================
         if stpage <= 1 :      # 検索を開始する最初のページ
-            self.startpage = 2
+            self.startpage = 1
         elif stpage > PageMax:
             self.startpage = PageMax-1
         else:
@@ -2077,108 +2107,108 @@ class multicheck:
         self.flag = True
     #end def
 
+    #============================================================================
+    #  計算書ファイルを分割する関数
+    #============================================================================
     def makepdf(self):
+        # プログラムのあるディレクトリー
         fld = os.getcwd()
+
+        # 分割ファイルを一時保存するディレクトリー（無ければ作成）
         self.dir1 = fld + "/pdf"
         if not os.path.isdir(self.dir1):
             os.mkdir(self.dir1)
         #end if
+
+        # 結果ファイルを一時保存するディレクトリー（無ければ作成）
         self.dir2 = fld + "/out"
         if not os.path.isdir(self.dir2):
             os.mkdir(self.dir2)
         #end if
         pagen = self.endpage - self.startpage + 1
-        pagen2 = int((pagen - 1) / self.bunkatu + 0.9)
-        self.pages = []
-        self.pages.append([1,1])
-        pagei = self.startpage - 1
-        while True:
-            p1 = pagei + 1
-            p2 = pagei + pagen2
-            if p2 >= self.endpage:
-                if p2 > self.endpage:
-                    p2 = self.endpage
-                #end if
-                self.pages.append([p1,p2])
-                break
-            else:
-                self.pages.append([p1,p2])
-                pagei=p2
-            #end if
-        #end while
-        a=0
-        n = 0
+
         self.fnames = []
-        self.outfnames = []
-        for p in self.pages:
-            n += 1
-            rg = str(p[0]-1) + ":" + str(p[1])
-            fname = self.dir1 + "/" + "file{:0=2}.pdf".format(n)
+        rg = "0:1"
+        fname = self.dir1 + "/" + "file{:0=2}.pdf".format(0)
+        self.fnames.append(fname)
+        merger = pypdf.PdfMerger()
+        merger.append(self.filename, pages=pypdf.PageRange(rg))
+        merger.write(fname)
+        merger.close()
+
+        for i in range(self.bunkatu):  
+            fname = self.dir1 + "/" + "file{:0=2}.pdf".format(i+1)
             self.fnames.append(fname)
-            outfname = self.dir2 + "/" + "outfile{:0=2}.pdf".format(n)
-            self.outfnames.append(outfname)
-            merger = pypdf.PdfMerger()
-            merger.append(self.filename, pages=pypdf.PageRange(rg))
-            merger.write(fname)
-            merger.close()
+            shutil.copyfile(self.filename, fname)
         #next
-        a=0
+    #end def
 
     
+    #============================================================================
+    #  表紙から計算プログラムの種類を検出する関数
+    #============================================================================
     def TopPageCheck(self):
         CT = CheckTool()
-        self.kind, self.verison = CT.TopPageCheckTool(self.fnames[0],self.outfnames[0],self.limit)
+        self.kind, self.verison = CT.TopPageCheckTool(self.fnames[0],self.dir2,self.limit)
     
-    def PageCheck(self,fname,outfname):
+    #============================================================================
+    #  分割された計算書から数値検出する関数
+    #============================================================================
+    def PageCheck(self,fname,outdir,psn,bunkatu):
         CT = CheckTool()
-        CT.PageCheck(fname,outfname,self.limit,self.kind,self.version)
+        CT.PageCheck(fname,outdir,self.startpage,self.endpage,psn,bunkatu,self.limit,self.kind,self.version)
         
+    #============================================================================
+    #  処理のメインルーチン関数
+    #       計算書の分割
+    #       表示の読取り
+    #       分割された計算書の並列処理
+    #============================================================================
     def doCheck(self):
+
+#       計算書の分割        
         self.makepdf()
+
+#       表示の読取り
         self.TopPageCheck()
 
-        n = len(self.fnames)
-        # threadlist = list()
-        # for i in range(n-1):
-        #     fname = self.fnames[i+1]
-        #     outfname = self.outfnames[i+1]
-        #     # self.PageCheck(fname,outfname)
-        #     thread = threading.Thread(target=self.PageCheck, args=([fname, outfname]),name="thread%d" % i)
-        #     threadlist.append(thread)
-
-        # for thread in threadlist:
-        #     thread.start()
-
-        # for thread in threadlist:
-        #     thread.join()
-
-
+#       分割された計算書の並列処理
+        n = len(self.fnames)    
+        # 並列処理（マルチプロセスのオブジェクトを作成）    
         Plist = list()
         for i in range(n-1):
             fname = self.fnames[i+1]
-            outfname = self.outfnames[i+1]
-            # self.PageCheck(fname,outfname)
-            P = Process(target=self.PageCheck, args=([fname, outfname]))
+            # outfname = self.outfnames[i+1]
+            # self.PageCheck(fname, self.dir2 , i, self.bunkatu)
+            P = Process(target=self.PageCheck, args=([fname, self.dir2 , i, self.bunkatu]))
             Plist.append(P)
 
+        # 各オブジェクトをスタート
         for P in Plist:
             P.start()
+
+        # 各オブジェクトをジョイン（同期）
         for P in Plist:
             P.join()
 
+        # 結果フォルダーにあるファイル名の読取り
         files = glob.glob(os.path.join(self.dir2, "*.pdf"))
+        # ファイルのソート
         files.sort()
 
+        # 結果ファイルを順番に結合し、１つの結果ファイルを保存
         merger = pypdf.PdfMerger()
         for file in files:
             merger.append(file)
-
+        #next
         merger.write(self.pdf_out_file)
         merger.close()
 
+        # 分割したPDFファイルを消去
         for file in files:
             os.remove(file)
 
+        # 結果ファイルを消去
         for file in self.fnames:
             os.remove(file)
 
@@ -2207,16 +2237,16 @@ if __name__ == '__main__':
     # # filename = "SS7構造計算書（抜粋）.pdf"
 
     stpage = 170
-    edpage = 210
-    limit = 0.70
-    # filename = "サンプル計算書(1).pdf"
-    stpage = 1
-    edpage = 0
-    limit = 0.70
-    filename = "SS7構造計算書（抜粋）のコピー.pdf"
+    edpage = 200
+    limit = 0.90
+    filename = "サンプル計算書(1).pdf"
+    # stpage = 1
+    # edpage = 0
+    # limit = 0.70
+    # filename = "SS7構造計算書（抜粋）のコピー.pdf"
 
     
-    MCT = multicheck(filename,limit=limit,stpage=stpage,edpage=edpage,bunkatu=8)
+    MCT = multicheck(filename,limit=limit,stpage=stpage,edpage=edpage,bunkatu=4)
     MCT.doCheck()
     # if MCT.flag:
     #     MCT.makepdf()
