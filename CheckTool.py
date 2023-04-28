@@ -34,6 +34,7 @@ from reportlab.lib.units import mm
 
 # pip install PyPDF2
 # from PyPDF2 import PdfReader as PR2 # 名前が上とかぶるので別名を使用
+import PyPDF2
 from pypdf import PdfReader as PR2 # 名前が上とかぶるので別名を使用
 import pypdf
 
@@ -49,6 +50,10 @@ import shutil
 
 kind = ""
 version = ""
+
+#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# 並列化 = False      # デバッグ時にはFalse,実行時はTrue
+並列化 = True
 
 #============================================================================
 #  浮動小数点数値を表しているかどうかを判定する関数
@@ -555,6 +560,9 @@ class CheckTool():
             # LTTextContainerの場合だけ標準出力　断面算定表(杭基礎)
             if isinstance(lt, LTTextContainer):
                 texts = lt.get_text()
+                # print(texts)
+                texts = texts.replace("\n","")
+                # print(texts)
                 if "柱の断面検定表"in texts :
                     柱_Flag = True
                     break
@@ -589,6 +597,7 @@ class CheckTool():
                 # LTTextContainerの場合だけ標準出力　断面算定表(杭基礎)
                 if isinstance(lt, LTTextContainer):
                     texts = lt.get_text()
+                    texts = texts.replace("\n","")
                     if "ブレースの断面検定表"in texts :
                         ブレース_Flag = True
                         壁_Flag = False
@@ -629,6 +638,7 @@ class CheckTool():
             # LTTextContainerの場合だけ標準出力　断面算定表(杭基礎)
             if isinstance(lt, LTTextContainer):
                 texts = lt.get_text()
+                texts = texts.replace("\n","")
                 if "RC柱"in texts or "RC梁"in texts:
                     B_kind = "RC造"
                     break
@@ -1297,6 +1307,7 @@ class CheckTool():
             # LTTextContainerの場合だけ標準出力　断面算定表(杭基礎) 仕口 継手 付着
             if isinstance(lt, LTTextContainer):
                 texts = lt.get_text()
+                texts = texts.replace("\n","")                
                 if "柱の断面検定表"in texts or "梁の断面検定表"in texts or "ブレースの断面検定表"in texts or "壁の断面検定表"in texts  or "検定比図" in texts : 
                     検定比_Flag = True
                     break                   
@@ -1835,15 +1846,32 @@ class CheckTool():
         pdf_file = filename
         # pdf_out_file = outfilenme
 
+        # PDFファイルを回転して保存
+        # def pdf_roll(p_file, p_angle):
+        #     file = PyPDF2.PdfFileReader(open(p_file + '.pdf', 'rb'))
+        #     file_output = PyPDF2.PdfFileWriter()
+        #     for page_num in range(file.numPages):
+        #         page = file.getPage(page_num)
+        #         page.rotateClockwise(p_angle)
+        #         file_output.addPage(page)
+        #     with open(p_file + '_roll.pdf', 'wb') as f:
+        #         file_output.write(f)
+
+
         # PyPDF2のツールを使用してPDFのページ情報を読み取る。
         # PDFのページ数と各ページの用紙サイズを取得
+        PaperSize = []
+        PaperRotate = []                
         try:
             with open(pdf_file, "rb") as input:
                 reader = PR2(input)
                 PageMax = len(reader.pages)     # PDFのページ数
-                PaperSize = []
+                # PaperSize = []
+                # PaperRotate = []
                 for page in reader.pages:       # 各ページの用紙サイズの読取り
                     p_size = page.mediabox
+                    rotate = page.get('/Rotate', 0)
+                    PaperRotate.append(rotate)
                     page_xmin = float(page.mediabox.lower_left[0])
                     page_ymin = float(page.mediabox.lower_left[1])
                     page_xmax = float(page.mediabox.upper_right[0])
@@ -1980,9 +2008,14 @@ class CheckTool():
                     # 保存先PDFデータを作成
                     cc = canvas.Canvas(out_path)
                     cc.setLineWidth(1)
+                    pageR = PaperRotate[pageN-1]
+                    if pageR ==0:
+                        pageSizeX = float(PaperSize[pageN-1][0])
+                        pageSizeY = float(PaperSize[pageN-1][1])
+                    else:
+                        pageSizeX = float(PaperSize[pageN-1][1])
+                        pageSizeY = float(PaperSize[pageN-1][0])
 
-                    pageSizeX = float(PaperSize[pageN-1][0])
-                    pageSizeY = float(PaperSize[pageN-1][1])
                     page = pdf.pages[pageN - 1]
                     ResultData = pageResultData[pageI]
                     # PDFデータへのページデータの展開
@@ -2069,6 +2102,7 @@ class multicheck:
         self.bunkatu = bunkatu
         self.kinf =""
         self.version = ""
+        self.rotate = []
 
         # 検出結果のファイル名
         self.pdf_out_file = os.path.splitext(self.filename)[0] + '[検出結果(閾値={:.2f}'.format(limit)+')].pdf'
@@ -2113,9 +2147,26 @@ class multicheck:
     #  計算書ファイルを分割する関数
     #============================================================================
     def makepdf(self):
+
         # プログラムのあるディレクトリー
         fld = os.getcwd()
+        p_file = fld + "/pdf/inputfile.pdf"
+        # PDFファイルを回転して保存
+        # def pdf_roll(p_file, p_angle):
+        file = pypdf.PdfReader(open(self.filename , 'rb'))
+        file_output = pypdf.PdfWriter()
+        for page in file.pages: 
+        # for page_num in range(file.numPages):
+            # page = file.getPage(page_num)
+            rotate = page.get('/Rotate', 0)
+            self.rotate.append(rotate)
+            if rotate != 0:
+                page.rotate(-rotate)
+            file_output.add_page(page)
+        with open(p_file, 'wb') as f:
+            file_output.write(f)
 
+        
         # 分割ファイルを一時保存するディレクトリー（無ければ作成）
         self.dir1 = fld + "/pdf"
         if not os.path.isdir(self.dir1):
@@ -2134,15 +2185,18 @@ class multicheck:
         fname = self.dir1 + "/" + "file{:0=2}.pdf".format(0)
         self.fnames.append(fname)
         merger = pypdf.PdfMerger()
-        merger.append(self.filename, pages=pypdf.PageRange(rg))
+        # merger.append(self.filename, pages=pypdf.PageRange(rg))
+        merger.append(p_file, pages=pypdf.PageRange(rg))
         merger.write(fname)
         merger.close()
 
         for i in range(self.bunkatu):  
             fname = self.dir1 + "/" + "file{:0=2}.pdf".format(i+1)
             self.fnames.append(fname)
-            shutil.copyfile(self.filename, fname)
+            # shutil.copyfile(self.filename, fname)
+            shutil.copyfile(p_file, fname)
         #next
+        os.remove(p_file)
     #end def
 
     
@@ -2178,20 +2232,32 @@ class multicheck:
         n = len(self.fnames)    
         # 並列処理（マルチプロセスのオブジェクトを作成）    
         Plist = list()
-        for i in range(n-1):
-            fname = self.fnames[i+1]
-            # outfname = self.outfnames[i+1]
-            # self.PageCheck(fname, self.dir2 , i, self.bunkatu)
-            P = Process(target=self.PageCheck, args=([fname, self.dir2 , i, self.bunkatu]))
-            Plist.append(P)
 
-        # 各オブジェクトをスタート
-        for P in Plist:
-            P.start()
+        if 並列化:
+            for i in range(n-1):
+                fname = self.fnames[i+1]
+                # outfname = self.outfnames[i+1]
+                # self.PageCheck(fname, self.dir2 , i, self.bunkatu)
+                P = Process(target=self.PageCheck, args=([fname, self.dir2 , i, self.bunkatu]))
+                Plist.append(P)
+            #next
 
-        # 各オブジェクトをジョイン（同期）
-        for P in Plist:
-            P.join()
+            # 各オブジェクトをスタート
+            for P in Plist:
+                P.start()
+            #next
+
+            # 各オブジェクトをジョイン（同期）
+            for P in Plist:
+                P.join()
+            #next
+        
+        else:
+            for i in range(n-1):
+                fname = self.fnames[i+1]
+                self.PageCheck(fname, self.dir2 , i, self.bunkatu)
+            #next
+        #end if
 
         # 結果フォルダーにあるファイル名の読取り
         files = glob.glob(os.path.join(self.dir2, "*.pdf"))
@@ -2200,8 +2266,30 @@ class multicheck:
 
         # 結果ファイルを順番に結合し、１つの結果ファイルを保存
         merger = pypdf.PdfMerger()
-        for file in files:
-            merger.append(file)
+        file1 = self.dir1 + "/f1.pdf"
+        for i,file in enumerate(files):
+            if i == 0:
+                merger.append(file)
+            else:
+                n = int(file.replace(".pdf","")[-4:])
+                if self.rotate[n-1] != 0:
+                    f1 = pypdf.PdfReader(open(file , 'rb'))
+                    f2 = pypdf.PdfWriter()
+                    for page in f1.pages:
+                        rotate = self.rotate[n-1]
+                        if rotate != 0:
+                            page.rotate(rotate)
+                        f2.add_page(page)
+                    with open(file1, 'wb') as f:
+                        f2.write(f)
+                    merger.append(file1)
+                else:
+                    merger.append(file)
+                #end if
+            #end if
+            if os.path.exists(file1):
+                os.remove(file1)
+            #
         #next
         merger.write(self.pdf_out_file)
         merger.close()
@@ -2213,6 +2301,9 @@ class multicheck:
         # 結果ファイルを消去
         for file in self.fnames:
             os.remove(file)
+
+        if os.path.exists(file1):
+            os.remove(file1)
 
         return True
 
@@ -2238,10 +2329,16 @@ if __name__ == '__main__':
     # filename = "03 【東大阪】 構造計算書（住棟）.pdf"
     # # filename = "SS7構造計算書（抜粋）.pdf"
 
-    stpage = 170
-    edpage = 200
+    stpage = 2
+    edpage = 373
     limit = 0.90
-    filename = "サンプル計算書(1).pdf"
+    # filename = "230094構造計算書のコピー.pdf"
+    filename = "230094構造計算書.pdf"
+
+    # stpage = 170
+    # edpage = 200
+    # limit = 0.90
+    # filename = "サンプル計算書(1).pdf"
     # stpage = 1
     # edpage = 0
     # limit = 0.70
