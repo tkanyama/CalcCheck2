@@ -2150,6 +2150,18 @@ class multicheck:
 
         # プログラムのあるディレクトリー
         fld = os.getcwd()
+
+        # 分割ファイルを一時保存するディレクトリー（無ければ作成）
+        self.dir1 = fld + "/pdf"
+        if not os.path.isdir(self.dir1):
+            os.mkdir(self.dir1)
+        #end if
+
+        # 結果ファイルを一時保存するディレクトリー（無ければ作成）
+        self.dir2 = fld + "/out"
+        if not os.path.isdir(self.dir2):
+            os.mkdir(self.dir2)
+        #end if
         p_file = fld + "/pdf/inputfile.pdf"
         # PDFファイルを回転して保存
         # def pdf_roll(p_file, p_angle):
@@ -2167,17 +2179,7 @@ class multicheck:
             file_output.write(f)
 
         
-        # 分割ファイルを一時保存するディレクトリー（無ければ作成）
-        self.dir1 = fld + "/pdf"
-        if not os.path.isdir(self.dir1):
-            os.mkdir(self.dir1)
-        #end if
 
-        # 結果ファイルを一時保存するディレクトリー（無ければ作成）
-        self.dir2 = fld + "/out"
-        if not os.path.isdir(self.dir2):
-            os.mkdir(self.dir2)
-        #end if
         pagen = self.endpage - self.startpage + 1
 
         self.fnames = []
@@ -2329,16 +2331,16 @@ if __name__ == '__main__':
     # filename = "03 【東大阪】 構造計算書（住棟）.pdf"
     # # filename = "SS7構造計算書（抜粋）.pdf"
 
-    stpage = 2
-    edpage = 373
-    limit = 0.90
-    # filename = "230094構造計算書のコピー.pdf"
-    filename = "230094構造計算書.pdf"
-
-    # stpage = 170
-    # edpage = 200
+    # stpage = 2
+    # edpage = 373
     # limit = 0.90
-    # filename = "サンプル計算書(1).pdf"
+    # # filename = "230094構造計算書のコピー.pdf"
+    # filename = "230094構造計算書.pdf"
+
+    stpage = 2
+    edpage = 0
+    limit = 0.90
+    filename = "サンプル計算書(1).pdf"
     # stpage = 1
     # edpage = 0
     # limit = 0.70
