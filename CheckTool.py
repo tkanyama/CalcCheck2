@@ -1547,7 +1547,7 @@ class CheckTool():
 
                 fp.close()
                 folderName = ""
-                os.remove("./kind.txt")
+                # os.remove("./kind.txt")
             # end with
 
         except OSError as e:
@@ -2220,13 +2220,16 @@ class multicheck:
     #       分割された計算書の並列処理
     #============================================================================
     def doCheck(self):
+        global kind, verion
 
 #       計算書の分割        
         self.makepdf()
-
+        
 #       表示の読取り
         self.TopPageCheck()
-
+        kind = self.kind
+        version = self.verison
+        
 #       分割された計算書の並列処理
         n = len(self.fnames)    
         # 並列処理（マルチプロセスのオブジェクトを作成）    
