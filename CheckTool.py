@@ -560,9 +560,6 @@ class CheckTool():
             # LTTextContainerの場合だけ標準出力　断面算定表(杭基礎)
             if isinstance(lt, LTTextContainer):
                 texts = lt.get_text()
-                # print(texts)
-                texts = texts.replace("\n","")
-                # print(texts)
                 if "柱の断面検定表"in texts :
                     柱_Flag = True
                     break
@@ -597,7 +594,6 @@ class CheckTool():
                 # LTTextContainerの場合だけ標準出力　断面算定表(杭基礎)
                 if isinstance(lt, LTTextContainer):
                     texts = lt.get_text()
-                    texts = texts.replace("\n","")
                     if "ブレースの断面検定表"in texts :
                         ブレース_Flag = True
                         壁_Flag = False
@@ -638,7 +634,6 @@ class CheckTool():
             # LTTextContainerの場合だけ標準出力　断面算定表(杭基礎)
             if isinstance(lt, LTTextContainer):
                 texts = lt.get_text()
-                texts = texts.replace("\n","")
                 if "RC柱"in texts or "RC梁"in texts:
                     B_kind = "RC造"
                     break
@@ -784,7 +779,7 @@ class CheckTool():
                                 # kmodeの時には「検定比」の下にある数値だけを検出する。
                                 if char[1]>=zx0 and char[2]<=zx1:
                                     t4 += char[0]
-
+                            # t4=t4.replace("検定比","")
                             if isfloat(t4): # 切り取った文字が数値の場合の処理
                                 a = float(t4)
                                 if a>=limit1 and a<1.0:
@@ -808,7 +803,7 @@ class CheckTool():
                     for line in CharLines:
                         i += 1
                         t3 = line[0]
-                        
+                        # print(t3)
                         CharLine = CharData[i] # １行文のデータを読み込む
                         t4 = ""
                     
@@ -820,7 +815,7 @@ class CheckTool():
                             st = 0
                             n = t3.find("検定比",st)
                             w0 = t4.split()
-                            if len(w0)>1:
+                            if len(w0)>=1:
                                 st = n + 3
                                 for w1 in w0:
                                     w2 = w1.replace("検定比","")
@@ -900,7 +895,7 @@ class CheckTool():
                                 else:
                                     st = 0
                                     w0 = t4.split()
-                                    if len(w0)>1:
+                                    if len(w0)>=1:
                                         for w1 in w0:
                                             w2 = w1.replace(" ","")
                                             if isfloat(w2): # 切り取った文字が数値の場合の処理
@@ -1039,7 +1034,7 @@ class CheckTool():
                             else:
                                 st = 0
                                 w0 = t4.split()
-                                if len(w0)>1:
+                                if len(w0)>=1:
                                     for w1 in w0:
                                         w2 = w1.replace(" ","")
                                         if isfloat(w2): # 切り取った文字が数値の場合の処理
@@ -1278,6 +1273,8 @@ class CheckTool():
         return pageFlag, ResultData
     #end def
     #*********************************************************************************
+
+
 
     def OtherSheet(self, page, limit, interpreter, device,interpreter2, device2):
         
